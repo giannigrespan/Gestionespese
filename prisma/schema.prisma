@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  familyId     String?
+  createdAt    DateTime @default(now())
+
+  family        Family?    @relation(fields: [familyId], references: [id])
+  expenses      Expense[]  @relation("ExpenseOwner")
+  forExpenses   Expense[]  @relation("ExpenseForUser")
+  createdFamily Family[]   @relation("FamilyCreator")
+}
+
+model Family {
+  id        String   @id @default(cuid())
+  name      String
+  createdBy String
+  createdAt DateTime @default(now())
+
+  creator  User      @relation("FamilyCreator", fields: [createdBy], references: [id])
+  members  User[]
+  expenses Expense[]
+  budgets  Budget[]
+  reminders Reminder[]
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  familyId    String
+  userId      String
+  forUserId   String?
+  amount      Float
+  category    String
+  description String
+  expenseType String   @default("shared")
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user     User   @relation("ExpenseOwner", fields: [userId], references: [id])
+  forUser  User?  @relation("ExpenseForUser", fields: [forUserId], references: [id])
+
+  @@index([familyId])
+}
+
+model Budget {
+  id        String   @id @default(cuid())
+  familyId  String
+  category  String
+  amount    Float
+  month     String
+  createdAt DateTime @default(now())
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, category, month])
+  @@index([familyId])
+}
+
+model Reminder {
+  id        String    @id @default(cuid())
+  familyId  String
+  title     String
+  amount    Float
+  dueDate   DateTime
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+}
