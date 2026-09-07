@@ -1,8 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CATEGORIES } from "@/lib/categories";
-import { Trash2, Plus } from "lucide-react";
+import { CATEGORIES, getCategory } from "@/lib/categories";
+import CategoryIcon from "./CategoryIcon";
+import { Trash2, Pencil, Plus, Users, User, Heart, X } from "lucide-react";
+
+const TYPES = [
+  { id: "shared", label: "Condivisa", sub: "50/50", icon: Users },
+  { id: "personal", label: "Personale", sub: "Solo mia", icon: User },
+  { id: "for_partner", label: "Per Partner", sub: "Non divisa", icon: Heart },
+];
+
+function hexToRgba(hex, alpha) {
+  const h = hex.replace("#", "");
+  const bigint = parseInt(h, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export default function ExpensesTab({ month, currentUserId }) {
   const [expenses, setExpenses] = useState([]);
@@ -67,104 +83,156 @@ export default function ExpensesTab({ month, currentUserId }) {
         </div>
         <button
           onClick={() => setShowForm((s) => !s)}
-          className="flex items-center gap-1 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          className="flex items-center gap-1 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700"
         >
-          <Plus size={16} /> Nuova spesa
+          {showForm ? <X size={16} /> : <Plus size={16} />}
+          {showForm ? "Chiudi" : "Nuova spesa"}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleAdd} className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-5">
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Importo"
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <select
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Descrizione"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
-          />
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <select
-            value={form.expense_type}
-            onChange={(e) => setForm({ ...form, expense_type: e.target.value })}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="shared">Condivisa</option>
-            <option value="personal">Personale</option>
-          </select>
+        <form onSubmit={handleAdd} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="text-base font-semibold text-slate-900">Nuova Spesa</h3>
+
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Tipo di Spesa</p>
+            <div className="grid grid-cols-3 gap-2">
+              {TYPES.map((t) => {
+                const Icon = t.icon;
+                const active = form.expense_type === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, expense_type: t.id })}
+                    className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition ${
+                      active
+                        ? "border-brand-600 bg-brand-600 text-white shadow-sm"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span className="text-sm font-medium">{t.label}</span>
+                    <span className={`text-[11px] ${active ? "text-brand-100" : "text-slate-400"}`}>{t.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Importo (€)</label>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={form.amount}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-lg font-medium focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Categoria</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {CATEGORIES.map((c) => {
+                const active = form.category === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, category: c.id })}
+                    style={active ? { borderColor: c.color, background: hexToRgba(c.color, 0.1) } : undefined}
+                    className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition ${
+                      active ? "" : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span
+                      className="flex h-8 w-8 items-center justify-center rounded-full"
+                      style={{ background: hexToRgba(c.color, 0.15), color: c.color }}
+                    >
+                      <CategoryIcon icon={c.icon} size={16} />
+                    </span>
+                    <span className="text-[11px] font-medium text-slate-700">{c.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Descrizione</label>
+            <input
+              type="text"
+              placeholder="Es: Spesa al supermercato"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Data</label>
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <button
             type="submit"
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 sm:col-span-1"
+            className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
           >
-            Salva
+            Aggiungi Spesa
           </button>
-          {error && <p className="col-span-full text-sm text-red-600">{error}</p>}
         </form>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <h3 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-800">Spese Recenti</h3>
         {loading ? (
           <p className="p-6 text-center text-sm text-slate-500">Caricamento...</p>
         ) : expenses.length === 0 ? (
           <p className="p-6 text-center text-sm text-slate-500">Nessuna spesa registrata per questo mese</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-2">Data</th>
-                <th className="px-4 py-2">Categoria</th>
-                <th className="px-4 py-2">Descrizione</th>
-                <th className="px-4 py-2">Chi</th>
-                <th className="px-4 py-2 text-right">Importo</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {expenses.map((e) => (
-                <tr key={e.expense_id}>
-                  <td className="px-4 py-2 text-slate-600">{new Date(e.date).toLocaleDateString("it-IT")}</td>
-                  <td className="px-4 py-2">
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                      {CATEGORIES.find((c) => c.id === e.category)?.label || e.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-slate-900">{e.description}</td>
-                  <td className="px-4 py-2 text-slate-500">{e.user_name}</td>
-                  <td className="px-4 py-2 text-right font-medium text-slate-900">€ {e.amount.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right">
-                    {e.user_id === currentUserId && (
-                      <button onClick={() => handleDelete(e.expense_id)} className="text-slate-400 hover:text-red-600">
-                        <Trash2 size={16} />
+          <ul className="divide-y divide-slate-100">
+            {expenses.map((e) => {
+              const cat = getCategory(e.category);
+              return (
+                <li key={e.expense_id} className="flex items-center gap-3 px-5 py-3">
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    style={{ background: hexToRgba(cat.color, 0.15), color: cat.color }}
+                  >
+                    <CategoryIcon icon={cat.icon} size={18} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-900">{e.description}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      {cat.label} · {e.user_name}
+                      {e.expense_type === "personal" ? " · personale" : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-red-600">-€ {e.amount.toFixed(2)}</span>
+                  {e.user_id === currentUserId && (
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        onClick={() => handleDelete(e.expense_id)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        title="Elimina"
+                      >
+                        <Trash2 size={15} />
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </div>
