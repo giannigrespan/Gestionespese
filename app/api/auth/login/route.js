@@ -14,6 +14,9 @@ export async function POST(request) {
   if (!user) {
     return NextResponse.json({ detail: "Credenziali non valide" }, { status: 401 });
   }
+  if (!user.passwordHash) {
+    return NextResponse.json({ detail: "Questo account usa il login con Google" }, { status: 401 });
+  }
 
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {

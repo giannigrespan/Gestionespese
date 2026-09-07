@@ -15,11 +15,17 @@ const STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT PRIMARY KEY,
     "email" TEXT NOT NULL UNIQUE,
-    "passwordHash" TEXT NOT NULL,
+    "passwordHash" TEXT,
+    "googleId" TEXT UNIQUE,
     "name" TEXT NOT NULL,
     "familyId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `ALTER TABLE "User" ALTER COLUMN "passwordHash" DROP NOT NULL`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "googleId" TEXT`,
+  `DO $$ BEGIN
+    ALTER TABLE "User" ADD CONSTRAINT "User_googleId_key" UNIQUE ("googleId");
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
   `CREATE TABLE IF NOT EXISTS "Expense" (
     "id" TEXT PRIMARY KEY,
     "familyId" TEXT NOT NULL,
