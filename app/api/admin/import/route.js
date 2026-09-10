@@ -66,6 +66,36 @@ export async function POST(request) {
   return NextResponse.json({ imported: result.count });
 }
 
+export async function GET(request) {
+  const secret = process.env.MIGRATE_SECRET;
+  if (!secret) {
+    return NextResponse.json({ detail: "MIGRATE_SECRET non configurato" }, { status: 503 });
+  }
+  const provided = request.headers.get("x-migrate-secret");
+  if (provided !== secret) {
+    return NextResponse.json({ detail: "Non autorizzato" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const email = searchParams.get("email");
+  if (!email) {
+    return NextResponse.json({ detail: "email obbligatoria" }, { status: 400 });
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (!user) {
+    return NextResponse.json({ detail: "Utente non trovato" }, { status: 404 });
+  }
+
+  const expenses = await prisma.expense.findMany({
+    where: { userId: user.id },
+    orderBy: { date: "asc" },
+    select: { id: true, date: true, description: true, amount: true, category: true, expenseType: true, familyId: true },
+  });
+
+  return NextResponse.json({ user_id: user.id, family_id: user.familyId, count: expenses.length, expenses });
+}
+
 export async function DELETE(request) {
   const secret = process.env.MIGRATE_SECRET;
   if (!secret) {
