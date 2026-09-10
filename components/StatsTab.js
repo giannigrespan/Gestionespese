@@ -1,31 +1,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+} from "recharts";
 import { CATEGORIES, getCategory } from "@/lib/categories";
 import { TrendingDown, Wallet, Receipt } from "lucide-react";
 
 const COLORS = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: c.color }), {});
+const MONTH_LABELS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
 
 export default function StatsTab({ month }) {
   const [stats, setStats] = useState(null);
   const [balance, setBalance] = useState(null);
+  const [yearly, setYearly] = useState(null);
   const [loading, setLoading] = useState(true);
+  const year = Number(month.split("-")[0]);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       fetch(`/api/stats/monthly?month=${month}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/stats/balance`).then((r) => (r.ok ? r.json() : null)),
-    ]).then(([s, b]) => {
+      fetch(`/api/stats/yearly?year=${year}`).then((r) => (r.ok ? r.json() : null)),
+    ]).then(([s, b, y]) => {
       setStats(s);
       setBalance(b);
+      setYearly(y);
       setLoading(false);
     });
-  }, [month]);
+  }, [month, year]);
 
   if (loading) return <p className="text-center text-sm text-slate-500">Caricamento...</p>;
   if (!stats) return <p className="text-center text-sm text-slate-500">Nessun dato disponibile</p>;
+
+  const yearlyData = (yearly?.months || []).map((m) => ({
+    label: MONTH_LABELS[m.month - 1],
+    total: m.total,
+    cumulative: m.cumulative,
+  }));
 
   const pieData = stats.by_category
     .filter((c) => c.spent > 0)
@@ -74,6 +99,26 @@ export default function StatsTab({ month }) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {yearly && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-2 text-sm font-semibold text-slate-800">Progressivo annuo {year}</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={yearlyData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => `€ ${Number(v).toFixed(2)}`} />
+              <Legend verticalAlign="bottom" height={36} iconType="circle" />
+              <Bar dataKey="total" name="Speso nel mese" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+              <Line type="monotone" dataKey="cumulative" name="Progressivo" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <p className="mt-2 text-right text-sm text-slate-500">
+            Totale {year}: <span className="font-semibold text-slate-800">€ {yearly.total_spent.toFixed(2)}</span>
+          </p>
+        </div>
+      )}
 
       {balance && balance.balances.length > 1 && (
         <div className="rounded-xl border border-slate-200 bg-white p-4">
