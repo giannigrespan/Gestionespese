@@ -32,6 +32,9 @@ export default function ExpensesTab({ month, currentUserId }) {
     expense_type: "shared",
   });
   const [error, setError] = useState("");
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [editError, setEditError] = useState("");
 
   async function load() {
     setLoading(true);
@@ -69,6 +72,46 @@ export default function ExpensesTab({ month, currentUserId }) {
 
   async function handleDelete(id) {
     await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  function startEdit(e) {
+    setShowForm(false);
+    setEditId(e.expense_id);
+    setEditError("");
+    setEditForm({
+      amount: String(e.amount),
+      category: e.category,
+      description: e.description,
+      date: e.date.slice(0, 10),
+      expense_type: e.expense_type,
+    });
+  }
+
+  function cancelEdit() {
+    setEditId(null);
+    setEditForm(null);
+    setEditError("");
+  }
+
+  async function handleEditSave(e) {
+    e.preventDefault();
+    setEditError("");
+    if (!editForm.amount || !editForm.description) {
+      setEditError("Compila importo e descrizione");
+      return;
+    }
+    const res = await fetch(`/api/expenses/${editId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editForm),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setEditError(data.detail || "Errore");
+      return;
+    }
+    cancelEdit();
     load();
   }
 
@@ -202,6 +245,116 @@ export default function ExpensesTab({ month, currentUserId }) {
           <ul className="divide-y divide-slate-100">
             {expenses.map((e) => {
               const cat = getCategory(e.category);
+              if (editId === e.expense_id) {
+                return (
+                  <li key={e.expense_id} className="px-5 py-4">
+                    <form onSubmit={handleEditSave} className="space-y-3">
+                      <div>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Tipo di Spesa</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {TYPES.map((t) => {
+                            const Icon = t.icon;
+                            const active = editForm.expense_type === t.id;
+                            return (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => setEditForm({ ...editForm, expense_type: t.id })}
+                                className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center transition ${
+                                  active
+                                    ? "border-brand-600 bg-brand-600 text-white shadow-sm"
+                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                }`}
+                              >
+                                <Icon size={16} />
+                                <span className="text-xs font-medium">{t.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Importo (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editForm.amount}
+                            onChange={(ev) => setEditForm({ ...editForm, amount: ev.target.value })}
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Data</label>
+                          <input
+                            type="date"
+                            value={editForm.date}
+                            onChange={(ev) => setEditForm({ ...editForm, date: ev.target.value })}
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Categoria</p>
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                          {CATEGORIES.map((c) => {
+                            const active = editForm.category === c.id;
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => setEditForm({ ...editForm, category: c.id })}
+                                style={active ? { borderColor: c.color, background: hexToRgba(c.color, 0.1) } : undefined}
+                                className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center transition ${
+                                  active ? "" : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+                                }`}
+                              >
+                                <span
+                                  className="flex h-7 w-7 items-center justify-center rounded-full"
+                                  style={{ background: hexToRgba(c.color, 0.15), color: c.color }}
+                                >
+                                  <CategoryIcon icon={c.icon} size={14} />
+                                </span>
+                                <span className="text-[10px] font-medium text-slate-700">{c.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Descrizione</label>
+                        <input
+                          type="text"
+                          value={editForm.description}
+                          onChange={(ev) => setEditForm({ ...editForm, description: ev.target.value })}
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        />
+                      </div>
+
+                      {editError && <p className="text-sm text-red-600">{editError}</p>}
+
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          className="flex-1 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                        >
+                          Salva
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    </form>
+                  </li>
+                );
+              }
               return (
                 <li key={e.expense_id} className="flex items-center gap-3 px-5 py-3">
                   <span
@@ -220,6 +373,13 @@ export default function ExpensesTab({ month, currentUserId }) {
                   <span className="shrink-0 text-sm font-semibold text-red-600">-€ {e.amount.toFixed(2)}</span>
                   {e.user_id === currentUserId && (
                     <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        onClick={() => startEdit(e)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-brand-50 hover:text-brand-600"
+                        title="Modifica"
+                      >
+                        <Pencil size={15} />
+                      </button>
                       <button
                         onClick={() => handleDelete(e.expense_id)}
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
