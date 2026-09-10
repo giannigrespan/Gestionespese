@@ -16,6 +16,9 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Users,
+  Copy,
+  Check,
 } from "lucide-react";
 
 const TABS = [
@@ -47,10 +50,29 @@ export default function Dashboard({ initialUser }) {
   const [tab, setTab] = useState("expenses");
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [menuOpen, setMenuOpen] = useState(false);
+  const [familyOpen, setFamilyOpen] = useState(false);
+  const [familyInfo, setFamilyInfo] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const handleFamilyReady = useCallback((familyId) => {
     setUser((u) => ({ ...u, family_id: familyId }));
   }, []);
+
+  async function openFamilyPanel() {
+    setMenuOpen(false);
+    setFamilyOpen(true);
+    if (!familyInfo) {
+      const res = await fetch("/api/families/me");
+      if (res.ok) setFamilyInfo(await res.json());
+    }
+  }
+
+  async function copyFamilyId() {
+    if (!familyInfo) return;
+    await navigator.clipboard.writeText(familyInfo.family_id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -94,7 +116,13 @@ export default function Dashboard({ initialUser }) {
                 {initial}
               </button>
               {menuOpen && (
-                <div className="absolute right-0 z-10 mt-2 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                <div className="absolute right-0 z-10 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  <button
+                    onClick={openFamilyPanel}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
+                  >
+                    <Users size={15} /> Famiglia
+                  </button>
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
@@ -169,6 +197,63 @@ export default function Dashboard({ initialUser }) {
         {tab === "stats" && <StatsTab month={month} />}
         {tab === "reminders" && <RemindersTab />}
       </main>
+
+      {familyOpen && (
+        <div
+          className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setFamilyOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold text-slate-900">Famiglia</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Condividi questo ID con chi vuoi aggiungere: dovrà registrarsi e scegliere &quot;Unisciti&quot;.
+            </p>
+
+            {!familyInfo ? (
+              <p className="mt-4 text-sm text-slate-500">Caricamento...</p>
+            ) : (
+              <>
+                <div className="mt-4">
+                  <label className="text-sm font-medium text-slate-700">ID famiglia</label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <code className="flex-1 truncate rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                      {familyInfo.family_id}
+                    </code>
+                    <button
+                      onClick={copyFamilyId}
+                      title="Copia"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-slate-500 hover:bg-slate-50"
+                    >
+                      {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-slate-700">Membri</p>
+                  <ul className="mt-1 space-y-1">
+                    {familyInfo.members.map((m) => (
+                      <li key={m.id} className="text-sm text-slate-600">
+                        {m.name} <span className="text-slate-400">· {m.email}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={() => setFamilyOpen(false)}
+              className="mt-6 w-full rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

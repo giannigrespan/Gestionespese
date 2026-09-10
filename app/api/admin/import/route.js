@@ -10,6 +10,7 @@ const CATEGORY_MAP = {
   svago: "svago",
   salute: "salute",
   trasporti: "trasporti",
+  "ricarica auto": "carburante",
   figli: "figli",
   altro: "altro",
 };
@@ -30,17 +31,23 @@ export async function POST(request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { email, expenses } = body;
+  const { email, expenses, create_family_if_missing, family_name } = body;
   if (!email || !Array.isArray(expenses)) {
     return NextResponse.json({ detail: "email e expenses[] obbligatori" }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  let user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) {
     return NextResponse.json({ detail: "Utente non trovato" }, { status: 404 });
   }
   if (!user.familyId) {
-    return NextResponse.json({ detail: "L'utente non ha una famiglia" }, { status: 400 });
+    if (!create_family_if_missing) {
+      return NextResponse.json({ detail: "L'utente non ha una famiglia" }, { status: 400 });
+    }
+    const family = await prisma.family.create({
+      data: { name: family_name || user.name, createdBy: user.id },
+    });
+    user = await prisma.user.update({ where: { id: user.id }, data: { familyId: family.id } });
   }
 
   const rows = expenses.map((e) => ({
