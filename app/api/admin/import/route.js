@@ -65,3 +65,35 @@ export async function POST(request) {
 
   return NextResponse.json({ imported: result.count });
 }
+
+export async function DELETE(request) {
+  const secret = process.env.MIGRATE_SECRET;
+  if (!secret) {
+    return NextResponse.json({ detail: "MIGRATE_SECRET non configurato" }, { status: 503 });
+  }
+  const provided = request.headers.get("x-migrate-secret");
+  if (provided !== secret) {
+    return NextResponse.json({ detail: "Non autorizzato" }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const { email, from, to } = body;
+  if (!email || !from || !to) {
+    return NextResponse.json({ detail: "email, from e to obbligatori" }, { status: 400 });
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (!user) {
+    return NextResponse.json({ detail: "Utente non trovato" }, { status: 404 });
+  }
+
+  const result = await prisma.expense.deleteMany({
+    where: {
+      userId: user.id,
+      familyId: user.familyId,
+      date: { gte: new Date(from), lt: new Date(to) },
+    },
+  });
+
+  return NextResponse.json({ deleted: result.count });
+}
