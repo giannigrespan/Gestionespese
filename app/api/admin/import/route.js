@@ -18,6 +18,7 @@ const CATEGORY_MAP = {
 const TYPE_MAP = {
   condivisa: "shared",
   personale: "personal",
+  "per partner": "for_partner",
 };
 
 export async function POST(request) {
