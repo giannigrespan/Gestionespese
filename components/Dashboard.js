@@ -4,10 +4,11 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Onboarding from "./Onboarding";
 import ExpensesTab from "./ExpensesTab";
+import IncomeTab from "./IncomeTab";
 import BudgetsTab from "./BudgetsTab";
 import StatsTab from "./StatsTab";
 import RemindersTab from "./RemindersTab";
-import RecurringExpensesTab from "./RecurringExpensesTab";
+import RecurringTab from "./RecurringTab";
 import {
   LogOut,
   Wallet,
@@ -15,6 +16,7 @@ import {
   BarChart3,
   BellRing,
   Repeat,
+  TrendingUp,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -25,6 +27,7 @@ import {
 
 const TABS = [
   { id: "expenses", label: "Spese", icon: Wallet },
+  { id: "income", label: "Entrate", icon: TrendingUp },
   { id: "budgets", label: "Budget", icon: PiggyBank },
   { id: "stats", label: "Statistiche", icon: BarChart3 },
   { id: "reminders", label: "Promemoria", icon: BellRing },
@@ -196,10 +199,11 @@ export default function Dashboard({ initialUser }) {
         )}
 
         {tab === "expenses" && <ExpensesTab month={month} currentUserId={user.id} />}
+        {tab === "income" && <IncomeTab month={month} />}
         {tab === "budgets" && <BudgetsTab month={month} />}
         {tab === "stats" && <StatsTab month={month} />}
         {tab === "reminders" && <RemindersTab />}
-        {tab === "recurring" && <RecurringExpensesTab />}
+        {tab === "recurring" && <RecurringTab />}
       </main>
 
       {familyOpen && (

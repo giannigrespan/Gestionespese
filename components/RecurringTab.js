@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CATEGORIES, getCategory } from "@/lib/categories";
+import { INCOME_CATEGORIES, getIncomeCategory } from "@/lib/incomeCategories";
 import CategoryIcon from "./CategoryIcon";
 import { Trash2, Pause, Play } from "lucide-react";
 
@@ -10,10 +11,16 @@ const FREQUENCIES = [
   { id: "yearly", label: "Annuale" },
 ];
 
-export default function RecurringExpensesTab() {
+const TYPES = [
+  { id: "expense", label: "Spesa" },
+  { id: "income", label: "Entrata" },
+];
+
+export default function RecurringTab() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
+    type: "expense",
     amount: "",
     category: CATEGORIES[0].id,
     description: "",
@@ -22,9 +29,11 @@ export default function RecurringExpensesTab() {
   });
   const [error, setError] = useState("");
 
+  const categoryList = form.type === "income" ? INCOME_CATEGORIES : CATEGORIES;
+
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/recurring-expenses");
+    const res = await fetch("/api/recurring-transactions");
     if (res.ok) setItems(await res.json());
     setLoading(false);
   }
@@ -33,6 +42,11 @@ export default function RecurringExpensesTab() {
     load();
   }, []);
 
+  function setType(type) {
+    const list = type === "income" ? INCOME_CATEGORIES : CATEGORIES;
+    setForm({ ...form, type, category: list[0].id });
+  }
+
   async function handleAdd(e) {
     e.preventDefault();
     setError("");
@@ -40,7 +54,7 @@ export default function RecurringExpensesTab() {
       setError("Compila importo, descrizione e data");
       return;
     }
-    const res = await fetch("/api/recurring-expenses", {
+    const res = await fetch("/api/recurring-transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -55,7 +69,7 @@ export default function RecurringExpensesTab() {
   }
 
   async function toggleActive(item) {
-    await fetch(`/api/recurring-expenses/${item.recurring_id}`, {
+    await fetch(`/api/recurring-transactions/${item.recurring_id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !item.active }),
@@ -64,14 +78,34 @@ export default function RecurringExpensesTab() {
   }
 
   async function handleDelete(id) {
-    await fetch(`/api/recurring-expenses/${id}`, { method: "DELETE" });
+    await fetch(`/api/recurring-transactions/${id}`, { method: "DELETE" });
     load();
   }
 
   return (
     <div className="space-y-4">
       <form onSubmit={handleAdd} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="text-base font-semibold text-slate-900">Nuovo addebito ricorrente</h3>
+        <h3 className="text-base font-semibold text-slate-900">Nuova transazione ricorrente</h3>
+
+        <div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Tipo</p>
+          <div className="grid grid-cols-2 gap-2">
+            {TYPES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setType(t.id)}
+                className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                  form.type === t.id
+                    ? "border-brand-600 bg-brand-600 text-white"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
@@ -109,7 +143,7 @@ export default function RecurringExpensesTab() {
         <div>
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Categoria</p>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {CATEGORIES.map((c) => {
+            {categoryList.map((c) => {
               const active = form.category === c.id;
               return (
                 <button
@@ -132,7 +166,7 @@ export default function RecurringExpensesTab() {
           <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Descrizione</label>
           <input
             type="text"
-            placeholder="Es: Abbonamento Netflix"
+            placeholder={form.type === "income" ? "Es: Stipendio mensile" : "Es: Abbonamento Netflix"}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
@@ -155,20 +189,20 @@ export default function RecurringExpensesTab() {
           type="submit"
           className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
         >
-          Aggiungi addebito ricorrente
+          Aggiungi transazione ricorrente
         </button>
       </form>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h3 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-800">Addebiti ricorrenti</h3>
+        <h3 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-800">Transazioni ricorrenti</h3>
         {loading ? (
           <p className="p-6 text-center text-sm text-slate-500">Caricamento...</p>
         ) : items.length === 0 ? (
-          <p className="p-6 text-center text-sm text-slate-500">Nessun addebito ricorrente configurato</p>
+          <p className="p-6 text-center text-sm text-slate-500">Nessuna transazione ricorrente configurata</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {items.map((r) => {
-              const cat = getCategory(r.category);
+              const cat = r.type === "income" ? getIncomeCategory(r.category) : getCategory(r.category);
               return (
                 <li key={r.recurring_id} className="flex items-center gap-3 px-5 py-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
@@ -179,11 +213,13 @@ export default function RecurringExpensesTab() {
                       {r.description}
                     </p>
                     <p className="truncate text-xs text-slate-500">
-                      {cat.label} · {r.frequency === "yearly" ? "annuale" : "mensile"} · prossimo addebito{" "}
-                      {new Date(r.next_run_date).toLocaleDateString("it-IT")}
+                      {cat.label} · {r.frequency === "yearly" ? "annuale" : "mensile"} · prossimo{" "}
+                      {r.type === "income" ? "accredito" : "addebito"} {new Date(r.next_run_date).toLocaleDateString("it-IT")}
                     </p>
                   </div>
-                  <span className="shrink-0 text-sm font-semibold text-red-600">-€ {r.amount.toFixed(2)}</span>
+                  <span className={`shrink-0 text-sm font-semibold ${r.type === "income" ? "text-emerald-600" : "text-red-600"}`}>
+                    {r.type === "income" ? "+" : "-"}€ {r.amount.toFixed(2)}
+                  </span>
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       onClick={() => toggleActive(r)}
