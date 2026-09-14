@@ -20,6 +20,7 @@ model User {
   family        Family?    @relation(fields: [familyId], references: [id])
   expenses      Expense[]  @relation("ExpenseOwner")
   forExpenses   Expense[]  @relation("ExpenseForUser")
+  incomes       Income[]
   createdFamily Family[]   @relation("FamilyCreator")
 }
 
@@ -32,9 +33,10 @@ model Family {
   creator  User      @relation("FamilyCreator", fields: [createdBy], references: [id])
   members  User[]
   expenses Expense[]
+  incomes  Income[]
   budgets  Budget[]
   reminders Reminder[]
-  recurringExpenses RecurringExpense[]
+  recurringTransactions RecurringTransaction[]
 }
 
 model Expense {
@@ -56,6 +58,22 @@ model Expense {
   @@index([familyId])
 }
 
+model Income {
+  id          String   @id @default(cuid())
+  familyId    String
+  userId      String
+  amount      Float
+  category    String
+  description String
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([familyId])
+}
+
 model Budget {
   id        String   @id @default(cuid())
   familyId  String
@@ -70,11 +88,12 @@ model Budget {
   @@index([familyId])
 }
 
-model RecurringExpense {
+model RecurringTransaction {
   id          String    @id @default(cuid())
   familyId    String
   userId      String
   forUserId   String?
+  type        String    @default("expense")
   amount      Float
   category    String
   description String

@@ -6,9 +6,9 @@ export async function PATCH(request, { params }) {
   const { user, error } = await requireFamilyUser();
   if (error) return error;
 
-  const recurring = await prisma.recurringExpense.findUnique({ where: { id: params.id } });
+  const recurring = await prisma.recurringTransaction.findUnique({ where: { id: params.id } });
   if (!recurring || recurring.familyId !== user.familyId) {
-    return NextResponse.json({ detail: "Addebito ricorrente non trovato" }, { status: 404 });
+    return NextResponse.json({ detail: "Transazione ricorrente non trovata" }, { status: 404 });
   }
 
   const body = await request.json().catch(() => ({}));
@@ -21,7 +21,7 @@ export async function PATCH(request, { params }) {
   if (body.next_run_date !== undefined) data.nextRunDate = new Date(body.next_run_date);
   if (body.active !== undefined) data.active = Boolean(body.active);
 
-  await prisma.recurringExpense.update({ where: { id: params.id }, data });
+  await prisma.recurringTransaction.update({ where: { id: params.id }, data });
   return NextResponse.json({ ok: true });
 }
 
@@ -29,11 +29,11 @@ export async function DELETE(request, { params }) {
   const { user, error } = await requireFamilyUser();
   if (error) return error;
 
-  const recurring = await prisma.recurringExpense.findUnique({ where: { id: params.id } });
+  const recurring = await prisma.recurringTransaction.findUnique({ where: { id: params.id } });
   if (!recurring || recurring.familyId !== user.familyId) {
-    return NextResponse.json({ detail: "Addebito ricorrente non trovato" }, { status: 404 });
+    return NextResponse.json({ detail: "Transazione ricorrente non trovata" }, { status: 404 });
   }
 
-  await prisma.recurringExpense.delete({ where: { id: params.id } });
+  await prisma.recurringTransaction.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

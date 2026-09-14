@@ -17,7 +17,7 @@ import {
   Line,
 } from "recharts";
 import { CATEGORIES, getCategory } from "@/lib/categories";
-import { TrendingDown, Wallet, Receipt } from "lucide-react";
+import { TrendingDown, TrendingUp, Wallet, Receipt } from "lucide-react";
 
 const COLORS = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: c.color }), {});
 const MONTH_LABELS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
@@ -59,9 +59,15 @@ export default function StatsTab({ month }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={TrendingDown} tone="text-red-500" label="Spese Totali" value={`€ ${stats.total_spent.toFixed(2)}`} />
-        <StatCard icon={Wallet} tone="text-emerald-500" label="Budget" value={`€ ${stats.total_budget.toFixed(2)}`} />
+        <StatCard icon={TrendingUp} tone="text-emerald-500" label="Entrate Totali" value={`€ ${(stats.total_income || 0).toFixed(2)}`} />
+        <StatCard
+          icon={Wallet}
+          tone={stats.net_balance >= 0 ? "text-emerald-500" : "text-red-500"}
+          label="Saldo Netto"
+          value={`${stats.net_balance >= 0 ? "+" : ""}€ ${(stats.net_balance || 0).toFixed(2)}`}
+        />
         <StatCard icon={Receipt} tone="text-brand-500" label="N. spese" value={stats.expense_count} />
       </div>
 

@@ -18,9 +18,13 @@ export async function GET(request) {
   const expenses = await prisma.expense.findMany({
     where: { familyId: user.familyId, date: { gte: start, lt: end } },
   });
+  const incomes = await prisma.income.findMany({
+    where: { familyId: user.familyId, date: { gte: start, lt: end } },
+  });
   const budgets = await prisma.budget.findMany({ where: { familyId: user.familyId, month } });
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
 
   const byCategory = {};
   for (const e of expenses) {
@@ -41,6 +45,8 @@ export async function GET(request) {
   return NextResponse.json({
     month,
     total_spent: total,
+    total_income: totalIncome,
+    net_balance: totalIncome - total,
     total_budget: budgets.reduce((s, b) => s + b.amount, 0),
     expense_count: expenses.length,
     by_category: categories,

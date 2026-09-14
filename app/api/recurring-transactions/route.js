@@ -3,12 +3,13 @@ import { prisma } from "@/lib/db";
 import { requireFamilyUser } from "@/lib/apiAuth";
 
 const FREQUENCIES = ["monthly", "yearly"];
+const TYPES = ["expense", "income"];
 
 export async function GET() {
   const { user, error } = await requireFamilyUser();
   if (error) return error;
 
-  const recurring = await prisma.recurringExpense.findMany({
+  const recurring = await prisma.recurringTransaction.findMany({
     where: { familyId: user.familyId },
     orderBy: { nextRunDate: "asc" },
   });
@@ -17,6 +18,7 @@ export async function GET() {
     recurring.map((r) => ({
       recurring_id: r.id,
       family_id: r.familyId,
+      type: r.type,
       amount: r.amount,
       category: r.category,
       description: r.description,
@@ -34,7 +36,7 @@ export async function POST(request) {
   if (error) return error;
 
   const body = await request.json().catch(() => ({}));
-  const { amount, category, description, expense_type, frequency, next_run_date, for_user_id } = body;
+  const { amount, category, description, expense_type, frequency, next_run_date, for_user_id, type } = body;
 
   if (amount === undefined || !category || !description || !next_run_date) {
     return NextResponse.json(
@@ -47,12 +49,14 @@ export async function POST(request) {
     return NextResponse.json({ detail: "Importo non valido" }, { status: 400 });
   }
   const freq = FREQUENCIES.includes(frequency) ? frequency : "monthly";
+  const txType = TYPES.includes(type) ? type : "expense";
 
-  const recurring = await prisma.recurringExpense.create({
+  const recurring = await prisma.recurringTransaction.create({
     data: {
       familyId: user.familyId,
       userId: user.id,
-      forUserId: for_user_id || null,
+      forUserId: txType === "expense" ? for_user_id || null : null,
+      type: txType,
       amount: numAmount,
       category,
       description,

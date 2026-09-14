@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// Materializza gli addebiti ricorrenti scaduti in spese vere e proprie.
-// Chiamato da un cron (Vercel Cron invia Authorization: Bearer $CRON_SECRET)
-// oppure manualmente con l'header x-migrate-secret.
+// Materializza le transazioni ricorrenti (spese ed entrate) scadute in
+// vere e proprie Expense/Income. Chiamato da un cron (Vercel Cron invia
+// Authorization: Bearer $CRON_SECRET) oppure manualmente con l'header
+// x-migrate-secret.
 function isAuthorized(request) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
@@ -40,7 +41,7 @@ async function runRecurring(request) {
   }
 
   const now = new Date();
-  const due = await prisma.recurringExpense.findMany({
+  const due = await prisma.recurringTransaction.findMany({
     where: { active: true, nextRunDate: { lte: now } },
   });
 
@@ -49,22 +50,35 @@ async function runRecurring(request) {
     // Se il job non gira per un po', recupera tutte le occorrenze passate.
     let runDate = r.nextRunDate;
     while (runDate <= now) {
-      await prisma.expense.create({
-        data: {
-          familyId: r.familyId,
-          userId: r.userId,
-          forUserId: r.forUserId,
-          amount: r.amount,
-          category: r.category,
-          description: r.description,
-          expenseType: r.expenseType,
-          date: runDate,
-        },
-      });
+      if (r.type === "income") {
+        await prisma.income.create({
+          data: {
+            familyId: r.familyId,
+            userId: r.userId,
+            amount: r.amount,
+            category: r.category,
+            description: r.description,
+            date: runDate,
+          },
+        });
+      } else {
+        await prisma.expense.create({
+          data: {
+            familyId: r.familyId,
+            userId: r.userId,
+            forUserId: r.forUserId,
+            amount: r.amount,
+            category: r.category,
+            description: r.description,
+            expenseType: r.expenseType,
+            date: runDate,
+          },
+        });
+      }
       created += 1;
       runDate = advance(runDate, r.frequency);
     }
-    await prisma.recurringExpense.update({
+    await prisma.recurringTransaction.update({
       where: { id: r.id },
       data: { nextRunDate: runDate, lastRunAt: now },
     });
