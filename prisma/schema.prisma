@@ -20,6 +20,7 @@ model User {
   family        Family?    @relation(fields: [familyId], references: [id])
   expenses      Expense[]  @relation("ExpenseOwner")
   forExpenses   Expense[]  @relation("ExpenseForUser")
+  incomes       Income[]
   createdFamily Family[]   @relation("FamilyCreator")
 }
 
