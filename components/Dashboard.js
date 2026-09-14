@@ -7,12 +7,14 @@ import ExpensesTab from "./ExpensesTab";
 import BudgetsTab from "./BudgetsTab";
 import StatsTab from "./StatsTab";
 import RemindersTab from "./RemindersTab";
+import RecurringExpensesTab from "./RecurringExpensesTab";
 import {
   LogOut,
   Wallet,
   PiggyBank,
   BarChart3,
   BellRing,
+  Repeat,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +28,7 @@ const TABS = [
   { id: "budgets", label: "Budget", icon: PiggyBank },
   { id: "stats", label: "Statistiche", icon: BarChart3 },
   { id: "reminders", label: "Promemoria", icon: BellRing },
+  { id: "recurring", label: "Ricorrenti", icon: Repeat },
 ];
 
 const MONTH_NAMES = [
@@ -196,6 +199,7 @@ export default function Dashboard({ initialUser }) {
         {tab === "budgets" && <BudgetsTab month={month} />}
         {tab === "stats" && <StatsTab month={month} />}
         {tab === "reminders" && <RemindersTab />}
+        {tab === "recurring" && <RecurringExpensesTab />}
       </main>
 
       {familyOpen && (

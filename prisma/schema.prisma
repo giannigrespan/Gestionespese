@@ -34,6 +34,7 @@ model Family {
   expenses Expense[]
   budgets  Budget[]
   reminders Reminder[]
+  recurringExpenses RecurringExpense[]
 }
 
 model Expense {
@@ -66,6 +67,26 @@ model Budget {
   family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 
   @@unique([familyId, category, month])
+  @@index([familyId])
+}
+
+model RecurringExpense {
+  id          String    @id @default(cuid())
+  familyId    String
+  userId      String
+  forUserId   String?
+  amount      Float
+  category    String
+  description String
+  expenseType String    @default("shared")
+  frequency   String    @default("monthly")
+  nextRunDate DateTime
+  active      Boolean   @default(true)
+  lastRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
   @@index([familyId])
 }
 
