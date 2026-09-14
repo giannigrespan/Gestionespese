@@ -60,8 +60,8 @@ export default function RecurringTab() {
       body: JSON.stringify(form),
     });
     if (!res.ok) {
-      const data = await res.json();
-      setError(data.detail || "Errore");
+      const data = await res.json().catch(() => ({}));
+      setError(data.detail || "Errore durante il salvataggio");
       return;
     }
     setForm({ ...form, amount: "", description: "" });
