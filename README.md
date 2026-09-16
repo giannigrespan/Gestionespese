@@ -46,6 +46,42 @@ npm run dev
    `POST /api/admin/migrate` con l'header `x-migrate-secret` per creare lo
    schema tramite la funzione serverless (che ha accesso di rete pieno).
 
+## API per automazioni esterne (es. Gemini / dettatura vocale)
+
+È possibile creare spese da un'automazione esterna (es. un Gem di Gemini o uno
+script legato a un assistente vocale) senza passare dalla sessione web:
+
+1. Da autenticato, genera una API key personale:
+
+   ```bash
+   curl -X POST https://<tuo-dominio>/api/account/api-key \
+     -H "Cookie: session_token=<il tuo cookie di sessione>"
+   ```
+
+   Risposta: `{ "api_key": "..." }`. La chiave viene mostrata solo alla
+   generazione: salvala subito. Rigenerandola, la precedente smette di funzionare.
+   `GET /api/account/api-key` restituisce solo se esiste già una chiave (mascherata).
+
+2. Usa la chiave per creare una spesa:
+
+   ```bash
+   curl -X POST https://<tuo-dominio>/api/agent/expenses \
+     -H "x-api-key: <la tua api key>" \
+     -H "Content-Type: application/json" \
+     -d '{"amount": 12.5, "category": "benzina", "description": "Rifornimento auto"}'
+   ```
+
+   Campi body: `amount` (obbligatorio), `description` (obbligatorio),
+   `category` (opzionale, testo libero: viene mappato alle categorie note
+   — es. "benzina"/"carburante" → `carburante`, "spesa"/"alimentari" → `spesa` —
+   oppure `altro` se non riconosciuta; categorie valide in `lib/categories.js`),
+   `date` (opzionale, ISO 8601, default ora corrente), `expense_type`
+   (opzionale: `shared`/`personal`/`for_partner`, default `shared`),
+   `for_user_id` (opzionale).
+
+   Risposta `201`: `{ "expense_id", "amount", "category", "description", "date" }`.
+   La spesa viene attribuita alla famiglia/utente proprietario della API key.
+
 ### Login con Google (opzionale)
 
 1. Crea delle credenziali OAuth 2.0 su [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
