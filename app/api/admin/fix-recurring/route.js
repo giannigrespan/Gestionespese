@@ -4,8 +4,13 @@ import { prisma } from "@/lib/db";
 // Strumento di supporto per correggere manualmente la nextRunDate di una
 // transazione ricorrente (es. quando il form è stato salvato con la data
 // sbagliata), senza dover eliminare e ricreare la voce dall'app. Protetto
-// dallo stesso header x-migrate-secret usato dagli altri endpoint admin.
+// dallo stesso header x-migrate-secret usato dagli altri endpoint admin,
+// oppure dal CRON_SECRET già usato per /api/admin/run-recurring.
 function isAuthorized(request) {
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = request.headers.get("authorization");
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true;
+
   const migrateSecret = process.env.MIGRATE_SECRET;
   const provided = request.headers.get("x-migrate-secret");
   return Boolean(migrateSecret) && provided === migrateSecret;
